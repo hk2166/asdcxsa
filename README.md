@@ -3,7 +3,7 @@
 A web app for a UK utility's day-ahead power buying team. It shows the wind forecast that was available when each buying decision was made, and measures how far that forecast missed, for every decision made in January 2026.
 
 **Live app:** https://asdcxsa.vercel.app  
-**Video walkthrough:** _add YouTube link_
+**Video walkthrough:** https://youtu.be/eQV-dEFT358 (Part 1: client overview, Part 2: technical review)
 
 ## What it does
 

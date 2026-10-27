@@ -20,6 +20,7 @@ from .data import Dataset, Run
 
 LONDON = ZoneInfo("Europe/London")
 HOUR = timedelta(hours=1)
+HALF_HOUR = timedelta(minutes=30)
 
 BAND_DAYS = 14  # history used for the uncertainty band
 BAND_MIN_POINTS = 24 * 7  # need at least a week of errors to show a band
@@ -69,6 +70,19 @@ def decision_forecast(data: Dataset, day: date, gate: time) -> list[HourPoint]:
             )
         )
     return points
+
+
+def naive_level(data: Dataset, cutoff: datetime) -> float | None:
+    """The 'wind stays as it is now' guess: the last metered half hour that had ended by `cutoff`.
+
+    A baseline any forecast should beat. Like the forecast, it only uses what was known at the time.
+    """
+    t = cutoff.replace(minute=cutoff.minute // 30 * 30, second=0, microsecond=0) - HALF_HOUR
+    for _ in range(48):  # step back past any gap, up to a day
+        if t in data.actuals:
+            return data.actuals[t]
+        t -= HALF_HOUR
+    return None
 
 
 def paired(points: list[HourPoint]) -> list[tuple[float, float]]:
@@ -138,15 +152,40 @@ def bucket(value: float, width: float) -> float:
     return math.floor(value / width) * width
 
 
+def day_totals(data: Dataset, points: list[HourPoint]) -> dict:
+    """Energy for one delivery day in MWh, or None if any hour is missing."""
+    forecasts = [p.forecast for p in points]
+    halves = [data.actuals.get(p.time + k * HALF_HOUR) for p in points for k in (0, 1)]
+    return {
+        "forecast_mwh": None if None in forecasts else sum(forecasts),
+        "actual_mwh": None if None in halves else sum(halves) / 2,  # each half hour is 0.5 h at that MW
+    }
+
+
 def accuracy_report(data: Dataset, days: list[date], gate: time) -> dict:
     """Everything the Accuracy page shows, for decisions made at `gate`."""
     points: list[HourPoint] = []
     expected: dict[datetime, float] = {}  # bias-adjusted forecast per hour
     adjusted_pairs: list[tuple[float, float]] = []
+    naive_pairs: list[tuple[float, float]] = []
     in_band: list[bool] = []
+    daily: list[dict] = []
     for d in days:
         day_points = decision_forecast(data, d, gate)
         points += day_points
+        day_pairs = paired(day_points)
+        level = naive_level(data, gate_closure(d, gate))
+        if level is not None:
+            naive_pairs += [(level, a) for _, a in day_pairs]  # same hours the forecast is scored on
+        day_summary = summarize(day_pairs)
+        daily.append(
+            {
+                "day": d.isoformat(),
+                "mae": day_summary.get("mae"),
+                "bias": day_summary.get("bias"),
+                **day_totals(data, day_points),
+            }
+        )
         band = error_band(data, d, gate)
         if not band:
             continue
@@ -185,7 +224,10 @@ def accuracy_report(data: Dataset, days: list[date], gate: time) -> dict:
         # Same metrics for the bias-adjusted forecast, and how often the
         # 10-90% band really contained the actual (should be ~80%).
         "adjusted_summary": summarize(adjusted_pairs),
+        # The naive 'wind stays as it is' guess, scored on the same hours: what the forecast adds.
+        "naive_summary": summarize(naive_pairs),
         "band_coverage": sum(in_band) / len(in_band) if in_band else None,
+        "days": daily,
         "timeline": [
             {"time": iso(p.time), "forecast": p.forecast, "expected": expected.get(p.time), "actual": p.actual}
             for p in points

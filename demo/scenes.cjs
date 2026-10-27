@@ -1,0 +1,281 @@
+// Narration and on-screen actions for the demo video.
+//
+// Each scene is either a slide (slides.html#<id>) or the live app. `say` lists the
+// narration one sentence at a time. Slide elements tagged data-s="n" appear when
+// sentence n starts. App scenes list `steps`: `at: [sentence, secondsIn]` and an
+// action to run then. Numbers quoted here come from the live API (January 2026).
+
+const APP = process.env.APP_URL || "https://asdcxsa.vercel.app";
+
+const stat = (n) => `.stats .stat:nth-child(${n})`;
+const card = (title) => `section.card:has(h3:has-text("${title}"))`;
+const CHART = ".chart .recharts-surface";
+
+module.exports = [
+  // ───────────────────────── Part 1: client overview ─────────────────────────
+  {
+    id: "p1-title",
+    part: 1,
+    chapter: "Part 1 · Client overview",
+    slide: true,
+    say: [
+      "Hello, and thanks for your time.",
+      "This is Wind Forecast Desk, the result of our pilot with your day-ahead trading team.",
+    ],
+  },
+  {
+    id: "p1-problem",
+    part: 1,
+    chapter: "The decision every morning",
+    slide: true,
+    say: [
+      "Every morning, your team decides how much power to buy for tomorrow.",
+      "The day-ahead auctions close the day before delivery: EPEX at 09:20, and N2EX at 09:50, UK time.",
+      "Wind is a big part of supply, but it depends on the weather.",
+      "Whatever wind doesn't deliver, you have to buy elsewhere.",
+      "So every morning comes down to two questions.",
+      "What does the latest forecast say wind will deliver tomorrow?",
+      "And how far can I trust that number?",
+    ],
+  },
+  {
+    id: "p1-decision",
+    part: 1,
+    chapter: "Decision day view",
+    url: `${APP}/?view=decision&gate=09:20&day=2026-01-15`,
+    async setup(h) {
+      await h.page.locator("label.toggle input").uncheck(); // start without hindsight
+      await h.page.waitForTimeout(300);
+    },
+    say: [
+      "This is the Decision day view.",
+      "Here we're buying for Thursday the 15th of January.",
+      "At gate closure, on Wednesday at 09:20, the newest Elexon forecast had been published at 07:30.",
+      "So it was one hour and fifty minutes old.",
+      "The app only uses forecasts that existed at that moment, so you see exactly what your trader would have seen.",
+      "The blue line is that forecast, hour by hour.",
+      "The green line corrects it for the bias we measured over the previous two weeks.",
+      "The shaded band is the likely range. In nine of ten recent hours, wind came in above its lower edge.",
+      "Above the chart is the day in energy terms.",
+      "Elexon forecast 279 GWh of wind.",
+      "Corrected, that's 244.",
+      "And the low case, the one to size your cover against, is 164.",
+      { t: "Because January is history, we can switch on what actually happened.", pause: 0.6 },
+      "254 GWh arrived.",
+      "The raw forecast was 25 too high. The corrected forecast was within 10.",
+      { t: "You can switch to the N2EX auction, which closes half an hour later and picks up the 09:30 forecast.", pause: 0.4 },
+      { t: "Or set any decision time of your own, say 6 in the morning.", pause: 0.5 },
+      "Then you'd be working from the 04:30 forecast instead.",
+    ],
+    steps: [
+      { at: [0, 0.2], do: (h) => h.point('.segmented button:has-text("Decision day")') },
+      { at: [1, 0.2], do: (h) => h.point(".day-picker select") },
+      { at: [2, 0.3], do: (h) => h.point(".lede strong", { nth: 1 }) },
+      { at: [2, 4.2], do: (h) => h.point(".lede strong", { nth: 2 }) },
+      { at: [5, 0.0], do: (h) => h.sweep(CHART, 0.04, 0.4, 0.22, 3000) },
+      { at: [6, 0.2], do: (h) => h.sweep(CHART, 0.4, 0.62, 0.3, 3000) },
+      { at: [7, 0.2], do: (h) => h.sweep(CHART, 0.62, 0.9, 0.42, 4200) },
+      { at: [8, 0.0], do: (h) => h.point(".stats", { fy: 0.08 }) },
+      { at: [9, 0.0], do: (h) => h.point(stat(1), { fy: 0.42 }) },
+      { at: [10, 0.0], do: (h) => h.point(stat(2), { fy: 0.42 }) },
+      { at: [11, 0.0], do: (h) => h.point(stat(3), { fy: 0.42 }) },
+      { at: [12, 2.2], do: (h) => h.click("label.toggle input") },
+      { at: [13, 0.0], do: (h) => h.point(stat(4), { fy: 0.42 }) },
+      { at: [14, 0.2], do: (h) => h.sweep(CHART, 0.1, 0.55, 0.3, 4000) },
+      { at: [15, 0.4], do: (h) => h.click('.segmented button:has-text("N2EX")') },
+      { at: [15, 3.6], do: (h) => h.point(".lede strong", { nth: 2 }) },
+      { at: [16, 0.3], do: (h) => h.click('.segmented button:has-text("Custom")') },
+      { at: [16, 1.6], do: (h) => h.type("input.time-input", "06:00") },
+      { at: [17, 0.0], do: (h) => h.point(".lede strong", { nth: 1 }) },
+      { at: [17, 1.6], do: (h) => h.point(".lede strong", { nth: 2 }) },
+    ],
+  },
+  {
+    id: "p1-accuracy",
+    part: 1,
+    chapter: "Forecast accuracy view",
+    url: `${APP}/?view=decision&gate=09:20&day=2026-01-15`,
+    async setup(h) {
+      // Warm the data this scene opens so nothing waits on the network on camera.
+      await h.page.evaluate(() =>
+        Promise.all(["/api/accuracy?gate=09:20", "/api/day/2026-01-28?gate=09:20"].map((u) => fetch(u).then((r) => r.json()))),
+      );
+    },
+    say: [
+      { t: "The second view answers the trust question.", pause: 0.3 },
+      "It covers every buying decision in January: 744 delivery hours.",
+      "The headline: the forecast you buy against over-stated wind by 1.7 GW in an average hour.",
+      "Taken at face value, it leaves you short.",
+      "The typical miss is about 2 GW, or 18% of the wind delivered.",
+      "Most of that error is bias, not randomness. And bias can be corrected.",
+      "Subtracting the previous two weeks' typical error, using only data available on the day, cuts the typical miss by 23%, to 1.56 GW.",
+      "And the likely range is reliable. 82% of hours landed inside a band designed to hold 80.",
+      "So, is the forecast worth having? Yes.",
+      "Compared with a naive guess, that wind stays where it is at decision time, Elexon's forecast halves the miss. The correction takes off another 23%.",
+      "Across the month, the blue forecast sits above the orange actual most of the time, especially on the windiest days.",
+      "The day-by-day chart shows which days went wrong.",
+      { t: "Click any day to open it.", pause: 0.8 },
+      "On the 28th, the forecast said 267 GWh. Only 138 arrived, below even the low case.",
+      "That's the one-in-ten day the range is there to warn you about.",
+    ],
+    steps: [
+      { at: [0, 0.3], do: (h) => h.click('.segmented button:has-text("Forecast accuracy")') },
+      { at: [1, 0.0], do: (h) => h.point(".lede", { fx: 0.3 }) },
+      { at: [2, 0.0], do: (h) => h.point(".hero-value") },
+      { at: [3, 0.0], do: (h) => h.point(".hero-text strong", { fx: 0.8 }) },
+      { at: [4, 0.0], do: (h) => h.point(stat(1), { fy: 0.45 }) },
+      { at: [4, 2.6], do: (h) => h.point(stat(2), { fy: 0.45 }) },
+      { at: [5, 0.0], do: (h) => h.point(".hero .muted", { fx: 0.35 }) },
+      { at: [6, 4.5], do: (h) => h.point(stat(4), { fy: 0.45 }) },
+      { at: [7, 0.0], do: (h) => h.point(stat(5), { fy: 0.45 }) },
+      { at: [8, 0.0], do: (h) => h.scroll(card("What the forecast is worth"), 60) },
+      { at: [9, 0.0], do: (h) => h.point(".method-bar", { nth: 0, fx: 0.9 }) },
+      { at: [9, 3.6], do: (h) => h.point(".method-bar", { nth: 1, fx: 0.9 }) },
+      { at: [9, 6.6], do: (h) => h.point(".method-bar", { nth: 2, fx: 0.9 }) },
+      { at: [10, 0.0], do: (h) => h.scroll(card("Forecast at decision time"), 60) },
+      { at: [10, 1.2], do: (h) => h.sweep(`${card("Forecast at decision time")} .recharts-surface`, 0.1, 0.62, 0.3, 4800) },
+      { at: [11, 0.0], do: (h) => h.scroll(card("Day by day"), 60) },
+      { at: [11, 1.0], do: (h) => h.point(`${card("Day by day")} .recharts-bar-rectangle`, { nth: 9, fy: 0.3 }) },
+      { at: [12, 0.0], do: (h) => h.point(`${card("Day by day")} .recharts-bar-rectangle`, { nth: 26, fy: 0.3 }) },
+      { at: [12, 1.1], do: (h) => h.click(`${card("Day by day")} .recharts-bar-rectangle`, { nth: 26, fy: 0.3 }) },
+      { at: [13, 0.0], do: (h) => h.point(stat(1), { fy: 0.42 }) },
+      { at: [13, 2.4], do: (h) => h.point(stat(4), { fy: 0.42 }) },
+      { at: [13, 4.4], do: (h) => h.point(stat(3), { fy: 0.42 }) },
+      { at: [14, 0.0], do: (h) => h.sweep(CHART, 0.3, 0.75, 0.5, 3200) },
+    ],
+  },
+  {
+    id: "p1-close",
+    part: 1,
+    chapter: "What it means for your desk",
+    slide: true,
+    say: [
+      "So what does this mean for your desk?",
+      "First, use the forecast, but treat it as optimistic, especially in strong wind.",
+      "Second, plan on the bias-corrected figure, and size your cover against the low case.",
+      "Third, waiting for a later forecast barely helps. Even deciding at 11 at night only trims the typical miss to 1.8 GW. So choose your auction on price, not on forecast quality.",
+      "Next, we'd like to run this live every morning, extend it beyond January, and add your demand forecast, so the tool shows the volume to buy directly.",
+      "Thank you.",
+    ],
+  },
+
+  // ───────────────────────── Part 2: technical review ─────────────────────────
+  {
+    id: "p2-title",
+    part: 2,
+    chapter: "Part 2 · Technical review",
+    slide: true,
+    say: [
+      "Part two is for the technical review.",
+      "Architecture, decision logic, analysis, performance, and how the code is built and tested.",
+    ],
+  },
+  {
+    id: "p2-arch",
+    part: 2,
+    chapter: "Architecture",
+    slide: true,
+    say: [
+      "The architecture is deliberately small.",
+      "A fetch script pulls two Elexon datasets: FUELHH filtered to wind, for actuals, and WINDFOR, for forecasts.",
+      "It saves them as a CSV snapshot of about 1 MB, committed to the repo.",
+      "January is history, so a snapshot keeps the app fast and reproducible.",
+      "The backend is Python with FastAPI, in three modules.",
+      "data loads the snapshot, analysis holds the logic as pure functions, and main is a thin HTTP layer.",
+      "The frontend is React with TypeScript, built with Vite, with charts in Recharts.",
+      "In Docker, one container serves both the API and the built UI.",
+      "On Vercel, the UI comes from the CDN, and the API runs as a Python serverless function in London.",
+    ],
+  },
+  {
+    id: "p2-rule",
+    part: 2,
+    chapter: "Decision logic: no look-ahead",
+    slide: true,
+    say: [
+      "The most important rule is no look-ahead.",
+      "A decision for delivery day D is made at gate closure on D−1, in UK time.",
+      "For each hour of D, we take the newest forecast published at or before that moment, and nothing later.",
+      "Forecast runs are sorted by publish time when they're loaded, so finding the latest one is a binary search.",
+      "Times are UTC inside and UK time at the edges, so clock-change days get 23 or 25 hours.",
+      "Each forecast hour is matched to the half hour of actuals starting with it, as the brief describes. Other alignments change the errors by about 1%.",
+    ],
+  },
+  {
+    id: "p2-band",
+    part: 2,
+    chapter: "Analysis: metrics, likely range, baseline",
+    slide: true,
+    say: [
+      "Error is forecast minus actual, so a positive error means wind was over-forecast.",
+      "I report mean absolute error, RMSE, bias, and a weighted percentage error: total miss over total wind.",
+      "It stays stable in calm hours.",
+      "The likely range follows the same no-look-ahead rule.",
+      "At gate closure, the latest fully metered day is D−2. So the band uses the errors of days D−15 to D−2.",
+      "Their 10th and 90th percentiles give the range, and the median gives the bias correction.",
+      "So the accuracy page is a true backtest. The band held 82% of hours, against an 80% target.",
+      "A naive baseline, scored on the same hours, shows the forecast halves its error.",
+    ],
+  },
+  {
+    id: "p2-api",
+    part: 2,
+    chapter: "API",
+    slide: true,
+    say: [
+      "The API has three endpoints: metadata, one delivery day, and the month-wide accuracy report.",
+      "Inputs are validated. Any decision time in hours and minutes works, and unknown days return a 404.",
+      "The dataset loads once per process, and the accuracy report is cached for each decision time.",
+    ],
+  },
+  {
+    id: "p2-perf",
+    part: 2,
+    chapter: "Performance",
+    slide: true,
+    say: [
+      "Speed matters, because reviewers and traders open the link cold.",
+      "The data only changes on a deploy, so successful API responses are cacheable. Vercel's CDN keeps them until the next deploy.",
+      "In the browser, the first view loads alongside the metadata, responses are kept, and neighbouring days are preloaded.",
+      "In my measurements, the first chart now appears in about 0.8 seconds instead of 1.2, and switching views takes 0.2 seconds instead of 0.8.",
+    ],
+  },
+  {
+    id: "p2-frontend",
+    part: 2,
+    chapter: "Frontend",
+    slide: true,
+    say: [
+      "On the frontend, TypeScript types mirror the JSON exactly, and each view is one component.",
+      "The view, decision time and day live in the URL, so any screen can be shared as a link.",
+      "Colours are design tokens, checked for colour-blind separation in light and dark themes.",
+    ],
+  },
+  {
+    id: "p2-quality",
+    part: 2,
+    chapter: "Testing and development practices",
+    slide: true,
+    say: [
+      "On quality, pytest covers the rules that matter most.",
+      "No forecast from after the gate. 23 and 25-hour days. A band and baseline built only from what was known. And API tests on the real snapshot.",
+      "Ruff handles linting and formatting, and the TypeScript build type-checks the frontend.",
+      "GitHub Actions runs all of this on every push.",
+      "The maths is standard-library Python, so the serverless function stays small.",
+      "I used Claude Code as an AI assistant for code and review, and checked the numbers against the data and tests, as the README notes.",
+    ],
+  },
+  {
+    id: "p2-next",
+    part: 2,
+    chapter: "Trade-offs and next steps",
+    slide: true,
+    say: [
+      "Finally, trade-offs and next steps.",
+      "The snapshot suits a pilot. In production, I'd schedule the fetch and store the data in a database.",
+      "Next, I'd test bias corrections that depend on wind level, where the error grows.",
+      "And with a demand forecast, the tool could show the volume to buy directly.",
+      "Links are in the description. Thanks for reviewing.",
+    ],
+  },
+];

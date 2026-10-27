@@ -1,0 +1,4 @@
+# Not needed by the Vercel build (keeps uploads small)
+demo/
+frontend/node_modules/
+frontend/dist/

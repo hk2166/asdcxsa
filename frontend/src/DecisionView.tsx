@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Area, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { api, type DayView } from "./api";
-import { clock, dateTime, dayLabel, gw, gwAxis, gwh, hoursMinutes, mw } from "./format";
+import { clock, dateTime, dayLabel, gw, gwAxis, gwh, hoursMinutes, mw, ukDay } from "./format";
 import { Card, Failed, Legend, Loading, Stat, Tip, useData, type Series } from "./ui";
 
 const HALF_HOUR = 30 * 60 * 1000;
@@ -30,7 +30,7 @@ function chartRows(view: DayView) {
   });
 }
 
-export function DecisionView({ day, gate }: { day: string; gate: string }) {
+export function DecisionView({ day, gate, atGate }: { day: string; gate: string; atGate: boolean }) {
   const { data, error } = useData(() => api.day(day, gate), `${day}@${gate}`);
   const [hindsight, setHindsight] = useState(true);
   if (error) return <Failed error={error} />;
@@ -38,6 +38,7 @@ export function DecisionView({ day, gate }: { day: string; gate: string }) {
 
   const gateAt = Date.parse(data.gate_closure);
   const run = data.runs_used.at(-1);
+  const uncovered = data.hours.filter((h) => h.forecast == null).length;
   // Energy actually delivered: each half-hour average MW x 0.5 h.
   const actualMwh = data.hours.every((h) => h.actual != null && h.actual_half != null)
     ? data.hours.reduce((sum, h) => sum + ((h.actual ?? 0) + (h.actual_half ?? 0)) / 2, 0)
@@ -48,11 +49,17 @@ export function DecisionView({ day, gate }: { day: string; gate: string }) {
   return (
     <>
       <p className="lede">
-        Buying for <strong>{dayLabel(data.day)}</strong>. At gate closure on{" "}
+        Buying for <strong>{dayLabel(data.day)}</strong>. {atGate ? "At gate closure on" : "Deciding on"}{" "}
         <strong>{dateTime(gateAt)}</strong> the newest wind forecast was published at{" "}
-        <strong>{run ? clock(run) : "–"}</strong>
+        <strong>{run ? (ukDay(run) === ukDay(gateAt) ? clock(run) : dateTime(run)) : "–"}</strong>
         {run && <> ({hoursMinutes(gateAt - Date.parse(run))} old)</>}.
       </p>
+      {uncovered > 0 && (
+        <p className="notice">
+          No forecast published by then reaches {uncovered} of the day’s {data.hours.length} hours, so those hours and the
+          day totals are left blank. Elexon’s runs don’t always look that far ahead.
+        </p>
+      )}
 
       <div className="stats">
         <Stat label="Elexon forecast" value={gwh(data.totals_mwh.forecast)} note="Wind energy for the day, as published" />

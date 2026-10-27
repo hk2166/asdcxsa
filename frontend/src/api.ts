@@ -32,10 +32,20 @@ export type DayView = {
   outcome: Summary;
 };
 
+export type DayRow = {
+  day: string; // delivery day, YYYY-MM-DD
+  mae: number | null;
+  bias: number | null; // mean of (forecast - actual)
+  forecast_mwh: number | null;
+  actual_mwh: number | null;
+};
+
 export type Accuracy = {
   summary: Summary;
   adjusted_summary: Summary;
+  naive_summary: Summary; // "wind stays as it is at decision time", same hours
   band_coverage: number | null;
+  days: DayRow[];
   timeline: { time: string; forecast: number | null; expected: number | null; actual: number | null }[];
   by_level: { from_mw: number; to_mw: number; n: number; mean_error: number; mae: number }[];
   histogram: { from_mw: number; to_mw: number; count: number }[];
@@ -49,11 +59,25 @@ export type Meta = {
   source: string;
 };
 
-async function get<T>(path: string): Promise<T> {
-  const res = await fetch(path);
-  if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
-  return res.json();
+// One request per URL for the life of the page. The data never changes, so a view
+// that was shown (or prefetched) once opens instantly the next time.
+const requests = new Map<string, Promise<unknown>>();
+
+function get<T>(path: string): Promise<T> {
+  let request = requests.get(path) as Promise<T> | undefined;
+  if (!request) {
+    request = fetch(path).then(async (res) => {
+      if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+      return res.json();
+    });
+    request.catch(() => requests.delete(path)); // a failed request is retried next time
+    requests.set(path, request);
+  }
+  return request;
 }
+
+/** Start loading in the background; errors surface when the view itself asks. */
+export const prefetch = (load: () => Promise<unknown>) => void load().catch(() => {});
 
 export const api = {
   meta: () => get<Meta>("/api/meta"),

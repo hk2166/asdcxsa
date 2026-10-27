@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Wind Forecast Desk slides</title>
+<!-- Slides for the demo video. Open slides.html#<scene-id>. Designed at 1280×720 CSS px;
+     the recorder zooms the page 1.5× to capture 1920×1080. window.step(n) reveals
+     elements tagged data-s ≤ n and moves code highlights. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="out/snippets.js"></script>
+<style>
+  :root {
+    --page: #0d0d0d; --surface: #1a1a19; --surface-2: #222220; --text: #f0efec; --text-2: #c3c2b7; --muted: #898781;
+    --border: rgba(255,255,255,.1); --blue: #3987e5; --green: #199e70; --orange: #d95926; --band: rgba(57,135,229,.2);
+    --mono: "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--page); color: var(--text); font: 17px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .slide { display: none; position: relative; width: 1280px; height: 720px; padding: 52px 72px 64px; overflow: hidden; }
+  .slide.active { display: block; }
+  .slide.dense { padding-top: 40px; }
+  .slide.dense .kicker { display: none; }
+  .slide.dense h2 { margin-bottom: 16px; }
+  .kicker { color: var(--blue); font-size: 13px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; margin: 0 0 10px; }
+  h1 { font-size: 64px; line-height: 1.05; margin: 0 0 18px; letter-spacing: -.02em; }
+  h2 { font-size: 34px; line-height: 1.15; margin: 0 0 26px; letter-spacing: -.01em; }
+  p { margin: 0; }
+  .muted { color: var(--muted); }
+  .foot { position: absolute; left: 72px; right: 72px; bottom: 24px; display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+  [data-s] { opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .5s ease; }
+  [data-s].on { opacity: 1; transform: none; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
+  .chip { display: inline-block; border: 1px solid var(--border); background: var(--surface); border-radius: 999px; padding: 4px 12px; font-size: 14px; color: var(--text-2); }
+  code, .mono { font-family: var(--mono); }
+  .row { display: flex; gap: 18px; }
+  .grow { flex: 1; }
+  .big { font-size: 22px; }
+  .hl-box { transition: border-color .4s, background .4s; }
+  .hl-box.hl { border-color: var(--blue); background: #172233; }
+
+  /* Code panel with a moving highlight bar */
+  .code { position: relative; background: #111110; border: 1px solid var(--border); border-radius: 12px; padding: 14px 0; overflow: hidden; }
+  .code pre { position: relative; margin: 0; padding: 0 18px; font: 12px/16px var(--mono); white-space: pre; color: #e6e5e1; z-index: 1; }
+  .code .bar { position: absolute; left: 0; right: 0; height: 0; top: 14px; background: rgba(57,135,229,.16); border-left: 3px solid var(--blue); opacity: 0; transition: top .45s ease, height .45s ease, opacity .3s; }
+  .code .bar.show { opacity: 1; }
+  .code .file { position: absolute; top: 8px; right: 14px; font: 11px var(--mono); color: var(--muted); z-index: 2; }
+  .hljs-keyword, .hljs-built_in { color: #ff8f7a; } .hljs-string, .hljs-doctag { color: #a5d6a7; } .hljs-comment { color: #7f7d77; font-style: italic; }
+  .hljs-number, .hljs-literal { color: #79b8ff; } .hljs-title { color: #d2a8ff; } .hljs-meta { color: #f2cc60; } .hljs-params { color: #e6e5e1; } .hljs-type { color: #79c0ff; }
+
+  /* Title slides */
+  .title-wrap { position: absolute; left: 72px; top: 170px; width: 760px; }
+  .title-wrap .lead { font-size: 24px; color: var(--text-2); }
+  .tag { margin-top: 34px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .deco { position: absolute; right: 40px; top: 120px; width: 420px; height: 420px; }
+
+  /* Problem slide timeline */
+  .timeline { position: relative; height: 150px; margin: 8px 0 22px; }
+  .track { position: absolute; top: 62px; height: 4px; background: var(--surface-2); border-radius: 2px; }
+  .seg-label { position: absolute; top: 80px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .mark { position: absolute; top: 0; width: 220px; margin-left: -110px; text-align: center; font-size: 14px; color: var(--text-2); white-space: nowrap; }
+  .mark b { display: block; font-size: 18px; color: var(--text); }
+  .mark i { position: absolute; left: 50%; top: 56px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--blue); box-shadow: 0 0 0 4px var(--page); }
+  .mark.gate i { background: var(--orange); }
+  .delivery { position: absolute; top: 52px; height: 24px; border-radius: 6px; background: var(--band); border: 1px solid rgba(57,135,229,.5); }
+  .formula { display: flex; align-items: center; gap: 16px; font-size: 22px; margin-bottom: 24px; }
+  .formula .t { padding: 8px 16px; border-radius: 10px; background: var(--surface); border: 1px solid var(--border); }
+  .q { display: flex; gap: 14px; align-items: baseline; }
+  .q .n { font-size: 30px; font-weight: 700; color: var(--blue); }
+  .q h3 { margin: 0 0 4px; font-size: 22px; }
+
+  /* Close slide */
+  .take { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .take .card h3 { margin: 6px 0 10px; font-size: 20px; line-height: 1.25; }
+  .take .num { font-size: 13px; font-weight: 700; color: var(--blue); letter-spacing: .06em; }
+  .take .fact { font-size: 15px; color: var(--text-2); }
+  .take .fact b { color: var(--text); }
+  .next { margin-top: 18px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .thanks { position: absolute; left: 72px; bottom: 70px; font-size: 26px; font-weight: 650; }
+  .thanks span { font-size: 17px; font-weight: 400; color: var(--text-2); margin-left: 14px; }
+
+  /* Architecture */
+  .arch { display: grid; grid-template-columns: 320px 56px 384px 56px 320px; grid-template-rows: auto auto auto auto; align-items: center; row-gap: 10px; }
+  .col-h { font-size: 13px; font-weight: 650; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); padding-bottom: 2px; }
+  .box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; min-height: 84px; }
+  .box b { display: block; font-size: 16px; }
+  .box span { display: block; font-size: 13.5px; color: var(--text-2); line-height: 1.4; }
+  .box.blue { border-color: rgba(57,135,229,.55); }
+  .arrow { text-align: center; color: var(--muted); font-size: 22px; }
+  .down { text-align: center; color: var(--muted); font-size: 18px; line-height: 1; height: 10px; margin-top: -6px; }
+  .deploy { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; }
+  .deploy .box { min-height: 0; }
+
+  /* Code slides */
+  .split { display: grid; grid-template-columns: 300px 1fr; gap: 24px; }
+  .points { display: flex; flex-direction: column; gap: 12px; }
+  .points .card { padding: 12px 14px; font-size: 15px; }
+  .points .card b { color: var(--text); }
+  .metric { display: grid; grid-template-columns: 62px 1fr; font-size: 15px; padding: 3px 0; }
+  .metric code { color: var(--text-2); font-size: 14px; }
+  .window { display: flex; gap: 3px; margin-top: 8px; }
+  .window div { flex: 1; height: 26px; border-radius: 4px; background: var(--surface-2); font: 10px/26px var(--mono); text-align: center; color: var(--muted); }
+  .window .in { background: rgba(57,135,229,.45); color: var(--text); }
+  .window .wait { background: transparent; border: 1px dashed var(--muted); }
+  .window .d { background: var(--orange); color: #fff; }
+  .result { font-size: 15px; }
+  .result b { color: var(--green); font-size: 20px; }
+
+  /* API / frontend */
+  table { border-collapse: collapse; width: 100%; font-size: 15px; }
+  td { padding: 8px 10px; border-top: 1px solid var(--border); vertical-align: top; }
+  td:first-child { font-family: var(--mono); font-size: 13.5px; white-space: nowrap; color: var(--text); }
+  td:last-child { color: var(--text-2); }
+  .tree { font: 14px/1.75 var(--mono); color: var(--text-2); }
+  .tree b { color: var(--text); font-weight: 600; }
+  .tree em { color: var(--muted); font-style: normal; font-family: system-ui, sans-serif; font-size: 13.5px; }
+  .url { font: 15px var(--mono); padding: 12px 14px; border-radius: 10px; background: #111110; border: 1px solid var(--border); color: var(--text-2); }
+  .url b { color: var(--blue); font-weight: 500; }
+  .swatches { display: flex; gap: 10px; margin-top: 10px; }
+  .sw { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-2); }
+  .sw i { width: 22px; height: 22px; border-radius: 6px; display: inline-block; }
+
+  /* Quality */
+  .term { background: #0a0a0a; border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; font: 12px/18px var(--mono); color: var(--text-2); }
+  .term .p { color: var(--muted); }
+  .term .ok { color: #3fb950; }
+  .term .line { border-radius: 4px; padding: 0 6px; margin: 0 -6px; transition: background .4s; }
+  .term .line.hl { background: rgba(57,135,229,.2); color: var(--text); }
+  .badge { display: inline-flex; align-items: center; gap: 8px; font-size: 15px; }
+  .badge i { width: 10px; height: 10px; border-radius: 50%; background: #3fb950; display: inline-block; }
+
+  /* Next steps */
+  .tradeoffs { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  .tradeoffs > div { padding: 14px 18px; border-top: 1px solid var(--border); font-size: 16px; }
+  .tradeoffs > div:nth-child(odd) { background: var(--surface); color: var(--text-2); }
+  .tradeoffs > div:nth-child(even) { background: #14181f; }
+  .tradeoffs .h { border-top: 0; font-size: 13px; font-weight: 650; text-transform: uppercase; letter-spacing: .07em; color: var(--muted) !important; }
+  .links { margin-top: 26px; display: flex; gap: 14px; }
+  .links .chip { font-size: 16px; padding: 8px 16px; color: var(--text); }
+</style>
+</head>
+<body>
+
+<!-- ───────────── Part 1 ───────────── -->
+<section class="slide" id="p1-title">
+  <div class="title-wrap">
+    <p class="kicker">Pilot results · Day-ahead power buying</p>
+    <h1>Wind Forecast Desk</h1>
+    <p class="lead">Know what wind will deliver tomorrow, and how far to trust the forecast, before the auction closes.</p>
+    <div class="tag" data-s="1">
+      <span class="chip">GB national wind</span><span class="chip">Elexon BMRS data</span><span class="chip">Decisions made in January 2026</span>
+    </div>
+  </div>
+  <svg class="deco" viewBox="0 0 420 420" aria-hidden="true">
+    <path d="M10 250 C70 200 110 150 160 170 S250 260 300 210 S380 120 410 140 L410 250 C380 230 330 300 300 300 S220 250 160 260 S70 300 10 330 Z" fill="rgba(57,135,229,.18)"/>
+    <path d="M10 290 C70 240 110 190 160 210 S250 290 300 250 S380 170 410 190" fill="none" stroke="#3987e5" stroke-width="4" stroke-linecap="round"/>
+    <path d="M10 310 C60 280 110 240 160 250 S240 320 300 285 S370 230 410 245" fill="none" stroke="#199e70" stroke-width="4" stroke-linecap="round"/>
+    <path d="M10 305 C40 300 70 260 100 268 S140 240 170 262 S220 330 250 300 S300 300 320 280 S370 250 410 262" fill="none" stroke="#d95926" stroke-width="3.5" stroke-linecap="round"/>
+  </svg>
+  <div class="foot"><span>Wind Forecast Desk</span><span>Part 1 · Client overview</span></div>
+</section>
+
+<section class="slide" id="p1-problem">
+  <p class="kicker">The decision</p>
+  <h2>Every morning, one decision: how much to buy for tomorrow</h2>
+  <div class="timeline" data-s="0">
+    <div class="track" style="left:0; width:560px"></div>
+    <div class="track" style="left:640px; width:496px"></div>
+    <div class="seg-label" style="left:0">D−1 · the day before</div>
+    <div class="seg-label" style="left:640px">D · delivery day</div>
+    <div class="mark" style="left:150px" data-s="0"><b>07:30</b>Elexon forecast published<i></i></div>
+    <div class="mark gate" style="left:330px" data-s="1"><b>09:20</b>EPEX auction closes<i></i></div>
+    <div class="mark gate" style="left:490px" data-s="1"><b>09:50</b>N2EX auction closes<i></i></div>
+    <div class="delivery" style="left:660px; width:456px"></div>
+    <div class="mark" style="left:888px; top:-2px"><b>00:00 – 24:00</b>power is delivered</div>
+  </div>
+  <div class="formula" data-s="3">
+    <span class="t">Demand</span><span class="muted">−</span><span class="t" style="border-color:rgba(57,135,229,.6)">Wind <span class="muted" style="font-size:15px">(weather-dependent)</span></span><span class="muted">=</span><span class="t" style="border-color:rgba(217,89,38,.7)">Power to buy</span>
+  </div>
+  <div class="row">
+    <div class="card grow q" data-s="5"><span class="n">1</span><div><h3>What will wind deliver tomorrow?</h3><p class="muted">Decision day view: the latest forecast available at gate closure</p></div></div>
+    <div class="card grow q" data-s="6"><span class="n">2</span><div><h3>How far can I trust that number?</h3><p class="muted">Forecast accuracy view: every January decision checked against metered output</p></div></div>
+  </div>
+  <div class="foot"><span>Wind Forecast Desk</span><span>Part 1 · Client overview</span></div>
+</section>
+
+<section class="slide" id="p1-close">
+  <p class="kicker">Recommendations</p>
+  <h2>What this means for your desk</h2>
+  <div class="take">
+    <div class="card" data-s="1"><div class="num">01</div><h3>Use the forecast, but treat it as optimistic</h3>
+      <p class="fact">It halves a naive guess's miss, but ran <b>+1.7 GW</b> high on average, and <b>+3.4 GW</b> when 18–21 GW was forecast.</p></div>
+    <div class="card" data-s="2"><div class="num">02</div><h3>Plan on the corrected figure, cover against the low case</h3>
+      <p class="fact">Typical miss <b>2.02 → 1.56 GW</b> (23% smaller). The range held <b>82%</b> of hours (target 80%).</p></div>
+    <div class="card" data-s="3"><div class="num">03</div><h3>Choose the auction on price, not forecast</h3>
+      <p class="fact">Later forecasts barely help: typical miss <b>2.02 GW</b> at 09:20, <b>2.00</b> at 09:50, still <b>1.81 GW</b> deciding at 23:00.</p></div>
+  </div>
+  <div class="next" data-s="4">
+    <span class="muted" style="font-size:15px">Next</span>
+    <span class="chip">Live forecast every morning</span><span class="chip">Beyond January</span><span class="chip">Add your demand forecast → volume to buy</span>
+  </div>
+  <div class="thanks" data-s="5">Thank you<span>asdcxsa.vercel.app</span></div>
+  <div class="foot"><span>Wind Forecast Desk</span><span>Part 1 · Client overview</span></div>
+</section>
+
+<!-- ───────────── Part 2 ───────────── -->
+<section class="slide" id="p2-title">
+  <div class="title-wrap">
+    <p class="kicker">Part 2 · Technical review</p>
+    <h1>How it's built</h1>
+    <p class="lead">Architecture, the no-look-ahead decision rule, the analysis, and the development practices behind it.</p>
+    <div class="tag" data-s="1">
+      <span class="chip">Python · FastAPI</span><span class="chip">React · TypeScript</span><span class="chip">Docker</span><span class="chip">Vercel · CDN caching</span><span class="chip">pytest · ruff · CI</span>
+    </div>
+  </div>
+  <div class="foot"><span>Wind Forecast Desk</span><span>Part 2 · Technical review</span></div>
+</section>
+
+<section class="slide" id="p2-arch">
+  <p class="kicker">Architecture</p>
+  <h2>Small on purpose: snapshot → pure-Python analysis → typed React UI</h2>
+  <div class="arch">
+    <div class="col-h" data-s="1">Data</div><div></div><div class="col-h" data-s="4">Backend · Python / FastAPI</div><div></div><div class="col-h" data-s="6">Frontend · React / TypeScript</div>
+
+    <div class="box" data-s="1"><b>Elexon BMRS API</b><span>FUELHH, fuelType = WIND (actual)<br>WINDFOR (forecast + publishTime)</span></div>
+    <div></div>
+    <div class="box blue" data-s="4"><b>main.py</b><span>Thin HTTP layer: validate, call analysis, return JSON</span></div>
+    <div class="arrow" data-s="6">⇄</div>
+    <div class="box" data-s="6"><b>api.ts</b><span>Typed fetch; types mirror the JSON</span></div>
+
+    <div class="box" data-s="1"><b>scripts/fetch_data.py</b><span>Standard library only · weekly chunks · retries</span></div>
+    <div></div>
+    <div class="box blue" data-s="4"><b>analysis.py</b><span>Pure functions: forecast at gate, metrics, likely range</span></div>
+    <div></div>
+    <div class="box" data-s="6"><b>DecisionView · AccuracyView</b><span>One component per view · Recharts · state in URL</span></div>
+
+    <div class="box" data-s="2"><b>data/*.csv snapshot</b><span>actuals.csv · forecasts.csv · ~1 MB, in the repo</span><span data-s="3" style="color:var(--green); margin-top:2px">Fast · reproducible · no runtime dependency on Elexon</span></div>
+    <div class="arrow" data-s="4">→</div>
+    <div class="box blue" data-s="4"><b>data.py</b><span>Loads the snapshot into memory once; runs sorted by publish time</span></div>
+    <div></div>
+    <div class="box" data-s="6"><b>Vite build</b><span>tsc type-check, then static bundle</span></div>
+  </div>
+  <div class="deploy">
+    <div class="box" data-s="7"><b>Docker · docker compose up</b><span>Two-stage build: Node builds the UI, then one uvicorn container serves the API and the UI on :8000</span></div>
+    <div class="box" data-s="8"><b>Vercel · asdcxsa.vercel.app</b><span>UI from the CDN · /api/* → api/index.py, a Python serverless function in London (lhr1) wrapping the same FastAPI app</span></div>
+  </div>
+  <div class="foot"><span>Wind Forecast Desk</span><span>Part 2 · Technical review</span></div>
+</section>
+
+<section class="slide dense" id="p2-rule">
+  <p class="kicker">Decision logic</p>
+  <h2>No look-ahead: only what the trader could have seen</h2>
+  <div class="split">
+    <div class="points">
+      <div class="card hl-box" data-s="1" data-hl="1"><b>Decision for day D</b> = gate closure on D−1, UK time (09:20 EPEX, 09:50 N2EX)</div>
+      <div class="card hl-box" data-s="2" data-hl="2"><b>Each hour of D</b>: newest run published at or before the gate. Nothing later.</div>
+      <div class="card hl-box" data-s="3" data-hl="3"><b>Runs pre-sorted</b> by publish time → binary search</div>
+      <div class="card hl-box" data-s="4" data-hl="4"><b>UTC inside</b>, Europe/London at the edges → 23 / 25-hour clock-change days</div>
+      <div class="card hl-box" data-s="5" data-hl="5"><b>Hourly forecast</b> ↔ half-hour actual starting at the same time (other alignments within ~1%)</div>
+    </div>
+    <div class="code" data-snippet="rule" data-hlspec='{"1":["def gate_closure","return datetime.combine(day - timedelta"],"2":["def decision_forecast","return points"],"3":["def latest_before","return runs[i - 1]"],"4":["def delivery_hours","return hours"],"5":["actual=data.actuals.get(t)","actual=data.actuals.get(t)"]}'>
+      <span class="file">backend/app/analysis.py</span><pre><code class="language-python"></code></pre><div class="bar"></div>
+    </div>
+  </div>
+  <div class="foot"><span>Wind Forecast Desk</span><span>Part 2 · Technical review</span></div>
+</section>
+
+<section class="slide dense" id="p2-band">
+  <p class="kicker">Analysis</p>
+  <h2>Honest metrics, and a range built only from the past</h2>
+  <div class="split">
+    <div class="points">
+      <div class="card" data-s="0">
+        <div style="font-size:15px; margin-bottom:6px"><b>error = forecast − actual</b> <span class="muted">(+ = over-forecast)</span></div>
+        <div data-s="1">
+          <div class="metric"><b>MAE</b><code>mean |error|</code></div>
+          <div class="metric"><b>RMSE</b><code>√ mean error²</code></div>
+          <div class="metric"><b>Bias</b><code>mean error</code></div>
+          <div class="metric"><b>WAPE</b><code>Σ|error| ÷ Σ actual</code></div>
+        </div>
+        <p class="muted" data-s="2" style="font-size:13.5px; margin-top:4px">WAPE stays stable in calm hours, where plain % error explodes.</p>
+      </div>
+      <div class="card" data-s="4">
+        <div style="font-size:14px">Errors used for delivery day D</div>
+        <div class="window"><div>D−16</div><div class="in">D−15</div><div class="in"></div><div class="in"></div><div class="in">…</div><div class="in"></div><div class="in">D−2</div><div class="wait">D−1</div><div class="d">D</div></div>
+        <p class="muted" style="font-size:12.5px; margin-top:6px">D−1 isn't fully metered at the gate, so it's never used.</p>
+      </div>
+      <div class="card result" data-s="6">Backtest over January: band held <b>82%</b> of hours (target 80%)</div>
+      <div class="card result" data-s="7">Naive baseline (wind stays as it is): MAE 4.10 GW vs forecast <b>2.02 GW</b></div>
+    </div>
+    <div class="code" data-snippet="band" data-hlspec='{"3":["def error_band","return Band(quantile(errors, 0.10)"],"4":["for back in range(2, 2 + BAND_DAYS)","errors += [f - a"],"5":["def apply","return max(0.0, forecast - self.p90)"],"6":null}'>
+      <span class="file">backend/app/analysis.py</span><pre><code class="language-python"></code></pre><div class="bar"></div>
+    </div>
+  </div>
+  <div class="foot"><span>Wind Forecast Desk</span><span>Part 2 · Technical review</span></div>
+</section>
+
+<section class="slide" id="p2-api">
+  <p class="kicker">API</p>
+  <h2>Three endpoints, validated inputs, cached results</h2>
+  <div class="card" data-s="0" style="padding:6px 14px; margin-bottom:16px">
+    <table>
+      <tr><td style="border-top:0">GET /api/meta</td><td style="border-top:0">Delivery days, auction gate presets, data source</td></tr>
+      <tr><td>GET /api/day/{YYYY-MM-DD}?gate=HH:MM</td><td>Forecast at the decision time per hour, likely range, day totals, outcome</td></tr>
+      <tr><td>GET /api/accuracy?gate=HH:MM</td><td>Month-wide metrics, naive baseline, per-day errors, timeline, error by wind level and hours ahead</td></tr>
+    </table>
+  </div>
+  <div class="code" data-snippet="api" data-hlspec='{"0":null,"1":["GateParam = Query(","raise HTTPException(404"],"2":["@lru_cache(maxsize=1)","return analysis.accuracy_report"]}'>
+    <span class="file" style="top:auto; bottom:8px">backend/app/main.py</span><pre><code class="language-python"></code></pre><div class="bar"></div>
+  </div>
+  <div class="foot"><span>Wind Forecast Desk</span><span>Part 2 · Technical review</span></div>
+</section>
+
+<section class="slide" id="p2-perf">
+  <p class="kicker">Performance</p>
+  <h2>Fast on a cold link: cache what never changes</h2>
+  <div class="row" style="align-items:flex-start">
+    <div class="code" data-snippet="perf" style="width:760px; flex:none" data-hlspec='{"1":["CACHE = ","return response"],"2":null}'>
+      <span class="file" style="top:auto; bottom:8px">backend/app/main.py</span><pre><code class="language-python"></code></pre><div class="bar"></div>
+    </div>
+    <div class="grow points">
+      <div class="card hl-box" data-s="1" data-hl="1"><b>Server</b>: responses cached by Vercel's CDN until the next deploy, by the browser for an hour. Function in London (lhr1).</div>
+      <div class="card hl-box" data-s="2" data-hl="2"><b>Browser</b>: first view's data fetched alongside /api/meta · one request per URL per session · neighbouring days and the other view preloaded.</div>
+      <div class="card hl-box" data-s="2" data-hl="2"><b>Assets</b>: hashed files cached for a year · React and charts in their own files.</div>
+    </div>
+  </div>
+  <div class="take" style="margin-top:18px" data-s="3">
+    <div class="card"><div class="num">FIRST CHART</div><p class="big" style="margin-top:6px"><span class="muted">1.17 s →</span> <b>0.78 s</b></p></div>
+    <div class="card"><div class="num">SWITCH TO ACCURACY</div><p class="big" style="margin-top:6px"><span class="muted">0.82 s →</span> <b>0.22 s</b></p></div>
+    <div class="card"><div class="num">NEXT DAY</div><p class="big" style="margin-top:6px"><span class="muted">0.32 s →</span> <b>0.14 s</b></p></div>
+  </div>
+  <p class="muted" data-s="3" style="font-size:13px; margin-top:8px">Median of 4 fresh browser sessions against the live app, before and after.</p>
+  <div class="foot"><span>Wind Forecast Desk</span><span>Part 2 · Technical review</span></div>
+</section>
+
+<section class="slide" id="p2-frontend">
+  <p class="kicker">Frontend</p>
+  <h2>Typed, one component per view, shareable by URL</h2>
+  <div class="row">
+    <div class="card" style="width:520px" data-s="0">
+      <div class="tree">
+        <b>frontend/src/</b><br>
+        ├─ <b>api.ts</b> <em>typed fetch · session cache · prefetch</em><br>
+        ├─ <b>App.tsx</b> <em>layout, view / gate / day controls</em><br>
+        ├─ <b>DecisionView.tsx</b> <em>one delivery day</em><br>
+        ├─ <b>AccuracyView.tsx</b> <em>January-wide analysis</em><br>
+        ├─ <b>ui.tsx</b> <em>stat, card, legend, tooltip</em><br>
+        ├─ <b>format.ts</b> <em>GW / GWh and UK-time formatting</em><br>
+        └─ <b>styles.css</b> <em>colour tokens, light + dark</em>
+      </div>
+    </div>
+    <div class="grow" style="display:flex; flex-direction:column; gap:16px">
+      <div class="card" data-s="0">
+        <div class="mono" style="font-size:12.5px; line-height:1.55; color:var(--text-2)">
+          <span style="color:#ff8f7a">export type</span> <span style="color:#79c0ff">Hour</span> = {<br>
+          &nbsp;&nbsp;time: string; <span style="color:#7f7d77">// start of the hour, ISO UTC</span><br>
+          &nbsp;&nbsp;forecast: number | null;<br>
+          &nbsp;&nbsp;expected: number | null; <span style="color:#7f7d77">// bias-corrected</span><br>
+          &nbsp;&nbsp;low: number | null; high: number | null;<br>
+          &nbsp;&nbsp;actual: number | null; actual_half: number | null;<br>};
+        </div>
+      </div>
+      <div data-s="1">
+        <div style="font-size:14px; margin-bottom:6px" class="muted">Every screen is a link</div>
+        <div class="url">asdcxsa.vercel.app/?<b>view</b>=decision&amp;<b>gate</b>=06:00&amp;<b>day</b>=2026-01-15</div>
+      </div>
+      <div data-s="2">
+        <div style="font-size:14px" class="muted">Colour tokens, checked for colour-blind separation in both themes</div>
+        <div class="swatches">
+          <span class="sw"><i style="background:#3987e5"></i>forecast</span>
+          <span class="sw"><i style="background:#199e70"></i>bias-corrected</span>
+          <span class="sw"><i style="background:#d95926"></i>actual</span>
+          <span class="sw"><i style="background:rgba(57,135,229,.35)"></i>likely range</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>Wind Forecast Desk</span><span>Part 2 · Technical review</span></div>
+</section>
+
+<section class="slide" id="p2-quality">
+  <p class="kicker">Development practices</p>
+  <h2>Tests on the rules that make the numbers trustworthy</h2>
+  <div class="row">
+    <div class="term" style="width:720px" data-s="0">
+      <div class="p">$ cd backend &amp;&amp; pytest -v</div>
+      <div class="line" data-hl="1">test_gate_closure_is_uk_time_on_the_day_before <span class="ok">PASSED</span></div>
+      <div class="line" data-hl="1">test_delivery_day_follows_the_uk_clock[day0-24] <span class="ok">PASSED</span></div>
+      <div class="line" data-hl="1">test_delivery_day_follows_the_uk_clock[day1-23] <span class="ok">PASSED</span></div>
+      <div class="line" data-hl="1">test_delivery_day_follows_the_uk_clock[day2-25] <span class="ok">PASSED</span></div>
+      <div class="line" data-hl="1">test_uses_newest_forecast_published_by_the_gate_and_nothing_later <span class="ok">PASSED</span></div>
+      <div class="line" data-hl="1">test_error_band_only_uses_days_known_at_the_gate <span class="ok">PASSED</span></div>
+      <div class="line" data-hl="1">test_naive_baseline_only_uses_half_hours_finished_by_the_cutoff <span class="ok">PASSED</span></div>
+      <div class="line">test_day_totals_are_energy_in_mwh <span class="ok">PASSED</span></div>
+      <div class="line">test_summary_metrics <span class="ok">PASSED</span></div>
+      <div class="line">test_quantile_interpolates_like_numpy <span class="ok">PASSED</span></div>
+      <div class="line" data-hl="1">test_api.py::test_day_view <span class="ok">PASSED</span></div>
+      <div class="line" data-hl="1">test_api.py::test_accuracy_covers_every_january_decision <span class="ok">PASSED</span></div>
+      <div class="line" data-hl="1">test_api.py::test_forecast_beats_the_naive_baseline <span class="ok">PASSED</span></div>
+      <div class="line" data-hl="1">test_api.py::test_any_decision_time_works <span class="ok">PASSED</span></div>
+      <div class="line" data-hl="1">test_api.py::test_successful_responses_are_cacheable_and_errors_are_not <span class="ok">PASSED</span></div>
+      <div class="line" data-hl="1">test_api.py::test_rejects_bad_input <span class="ok">PASSED</span></div>
+      <div class="ok">===== 16 passed in 0.38s =====</div>
+      <div data-s="2" style="margin-top:8px">
+        <div class="p">$ ruff check . &amp;&amp; ruff format --check .</div>
+        <div class="line">All checks passed! · 7 files already formatted</div>
+        <div class="p">$ cd frontend &amp;&amp; npm run build <span style="color:#7f7d77"># tsc --noEmit &amp;&amp; vite build</span></div>
+        <div class="line"><span class="ok">✓</span> built</div>
+      </div>
+    </div>
+    <div class="grow" style="display:flex; flex-direction:column; gap:14px">
+      <div class="card" data-s="3"><div class="badge"><i></i><b>GitHub Actions</b></div><p class="muted" style="font-size:14px; margin-top:6px">Every push: ruff, pytest, TypeScript check and build</p></div>
+      <div class="card" data-s="4"><b style="font-size:15px">3 runtime dependencies</b><p class="muted" style="font-size:14px; margin-top:4px">fastapi · uvicorn · tzdata. The maths is standard-library Python.</p></div>
+      <div class="card" data-s="5"><b style="font-size:15px">AI-assisted, human-checked</b><p class="muted" style="font-size:14px; margin-top:4px">Built with Claude Code; numbers verified against data and tests. Disclosed in the README.</p></div>
+    </div>
+  </div>
+  <div class="foot"><span>Wind Forecast Desk</span><span>Part 2 · Technical review</span></div>
+</section>
+
+<section class="slide" id="p2-next">
+  <p class="kicker">Trade-offs</p>
+  <h2>Right-sized for a pilot, with a clear path to production</h2>
+  <div class="tradeoffs">
+    <div class="h">Chosen for the pilot</div><div class="h">Next, for production</div>
+    <div data-s="1">CSV snapshot in the repo</div><div data-s="1">Scheduled ingestion into a database, fetched incrementally</div>
+    <div data-s="2">Median bias correction over 14 days</div><div data-s="2">Corrections conditioned on wind level and horizon, chosen by backtest</div>
+    <div data-s="3">Wind only, as scoped</div><div data-s="3">Add a demand forecast → show the volume to buy</div>
+  </div>
+  <div class="links" data-s="4">
+    <span class="chip">▶ asdcxsa.vercel.app</span><span class="chip">github.com/hk2166/asdcxsa</span><span class="chip">README: setup, files, design notes</span>
+  </div>
+  <div class="foot"><span>Wind Forecast Desk</span><span>Part 2 · Technical review</span></div>
+</section>
+
+<script>
+  const LINE = 16, PAD = 14;
+  const active = () => document.querySelector(".slide.active");
+
+  function lineOf(lines, marker, from = 0) {
+    for (let i = from; i < lines.length; i++) if (lines[i].includes(marker)) return i;
+    throw new Error(`marker not found: ${marker}`);
+  }
+
+  function moveBar(codeEl, k) {
+    const spec = JSON.parse(codeEl.dataset.hlspec || "{}");
+    const keys = Object.keys(spec).map(Number).filter((n) => n <= k).sort((a, b) => a - b);
+    const range = keys.length ? spec[keys.at(-1)] : null;
+    const bar = codeEl.querySelector(".bar");
+    if (!range) return bar.classList.remove("show");
+    const lines = codeEl.querySelector("code").textContent.split("\n");
+    const a = lineOf(lines, range[0]), b = lineOf(lines, range[1], a);
+    bar.style.top = `${PAD + a * LINE}px`;
+    bar.style.height = `${(b - a + 1) * LINE}px`;
+    bar.classList.add("show");
+  }
+
+  window.step = (k) => {
+    const s = active();
+    s.querySelectorAll("[data-s]").forEach((e) => e.classList.toggle("on", Number(e.dataset.s) <= k));
+    s.querySelectorAll("[data-hl]").forEach((e) => e.classList.toggle("hl", e.dataset.hl.split(" ").includes(String(k))));
+    s.querySelectorAll(".code").forEach((c) => moveBar(c, k));
+  };
+
+  const id = location.hash.slice(1) || "p1-title";
+  document.getElementById(id).classList.add("active");
+  document.querySelectorAll(".code").forEach((c) => {
+    const code = c.querySelector("code");
+    code.textContent = (window.SNIPPETS || {})[c.dataset.snippet] || "";
+    if (window.hljs) hljs.highlightElement(code);
+  });
+  window.step(-1);
+  document.fonts.ready.then(() => (window.ready = true));
+</script>
+</body>
+</html>

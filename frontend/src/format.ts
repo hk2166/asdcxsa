@@ -18,6 +18,8 @@ export const clock = fmt({ hour: "2-digit", minute: "2-digit" }); // 09:20
 export const dayLabel = fmt({ weekday: "short", day: "numeric", month: "short" }); // Thu 15 Jan
 export const dayShort = fmt({ day: "numeric", month: "short" }); // 15 Jan
 export const dateTime = fmt({ weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+/** The UK calendar day a moment falls in, as YYYY-MM-DD (the delivery day of an hour). */
+export const ukDay = (t: string | number) => new Intl.DateTimeFormat("en-CA", { timeZone: UK }).format(new Date(t));
 
 /** Y axis from 0 with round GW steps (Recharts' own picks give 4.5, 9, 13.5...). */
 export function gwAxis(maxMw: number) {

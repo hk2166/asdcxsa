@@ -61,6 +61,32 @@ def test_error_band_only_uses_days_known_at_the_gate():
     assert band.apply(5000) == (4900, 4900, 4900)
 
 
+def test_naive_baseline_only_uses_half_hours_finished_by_the_cutoff():
+    data = Dataset(
+        actuals={
+            utc(2026, 1, 14, 8, 30): 800.0,  # 08:30-09:00, finished before a 09:20 decision
+            utc(2026, 1, 14, 9, 0): 900.0,  # 09:00-09:30, still running at 09:20
+        },
+        forecasts={},
+    )
+    assert a.naive_level(data, utc(2026, 1, 14, 9, 20)) == 800.0
+    assert a.naive_level(data, utc(2026, 1, 14, 9, 30)) == 900.0
+    # A gap steps back to the last value that exists.
+    assert a.naive_level(data, utc(2026, 1, 14, 11, 0)) == 900.0
+
+
+def test_day_totals_are_energy_in_mwh():
+    day = date(2026, 1, 15)
+    hours = a.delivery_hours(day)
+    actuals = {t + k * a.HALF_HOUR: 1000.0 + 200 * k for t in hours for k in (0, 1)}  # 1000 then 1200 MW
+    points = [a.HourPoint(t, 2000.0, None, actuals[t]) for t in hours]
+    totals = a.day_totals(Dataset(actuals, {}), points)
+    assert totals == {"forecast_mwh": 24 * 2000.0, "actual_mwh": 24 * 1100.0}
+
+    del actuals[hours[5] + a.HALF_HOUR]  # one missing half hour: don't report a partial total
+    assert a.day_totals(Dataset(actuals, {}), points)["actual_mwh"] is None
+
+
 def test_summary_metrics():
     # errors: +10, -10, +30, 0
     s = a.summarize([(110, 100), (90, 100), (130, 100), (100, 100)])

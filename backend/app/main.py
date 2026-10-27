@@ -7,7 +7,7 @@ from datetime import date, time, timedelta
 from functools import lru_cache
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.staticfiles import StaticFiles
 
 from . import analysis
@@ -24,6 +24,18 @@ GATES = [
 GateParam = Query("09:20", pattern=r"^([01]\d|2[0-3]):[0-5]\d$", description="Gate closure on D-1, UK time (HH:MM)")
 
 app = FastAPI(title="Wind Forecast Desk API")
+
+# The data is a fixed snapshot, so a response only changes when the app is redeployed.
+# Browsers reuse it for an hour; Vercel's CDN keeps it until the next deploy (which clears the CDN).
+CACHE = "public, max-age=3600, s-maxage=31536000"
+
+
+@app.middleware("http")
+async def cache_api_responses(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith("/api/") and response.status_code == 200:
+        response.headers["Cache-Control"] = CACHE
+    return response
 
 
 @lru_cache(maxsize=1)

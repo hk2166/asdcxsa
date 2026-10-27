@@ -12,8 +12,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { api } from "./api";
-import { dateTime, dayShort, gw, gwAxis, mw, pct, signedGw } from "./format";
+import { api, type DayRow } from "./api";
+import { dateTime, dayLabel, dayShort, gw, gwAxis, gwh, mw, pct, signedGw, ukDay } from "./format";
 import { Card, Failed, Legend, Loading, Stat, Tip, useData, type Series } from "./ui";
 
 const axis = { stroke: "var(--axis)", tick: { fill: "var(--text-muted)", fontSize: 12 } };
@@ -26,13 +26,43 @@ const TIMELINE: Series[] = [
   { key: "actual", label: "Actual", color: "var(--series-actual)" },
 ];
 
-export function AccuracyView({ gate }: { gate: string }) {
+/** Axis in 2 GW steps that includes zero and every value (errors can be negative). */
+function signedAxis(values: number[]) {
+  const step = 2000;
+  const lo = Math.min(0, Math.floor(Math.min(...values) / step) * step);
+  const hi = Math.max(step, Math.ceil(Math.max(...values) / step) * step);
+  return { domain: [lo, hi], ticks: Array.from({ length: (hi - lo) / step + 1 }, (_, i) => lo + i * step) };
+}
+
+/** Typical miss of three ways to estimate tomorrow's wind, as bars on one scale. */
+function MethodBars({ methods }: { methods: { label: string; note: string; mae: number; color: string }[] }) {
+  const max = Math.max(...methods.map((m) => m.mae));
+  return (
+    <div className="methods">
+      {methods.map((m) => (
+        <div className="method" key={m.label}>
+          <div className="method-label">
+            {m.label}
+            <span className="muted">{m.note}</span>
+          </div>
+          <div className="method-track">
+            <div className="method-bar" style={{ width: `${(m.mae / max) * 100}%`, background: m.color }} />
+          </div>
+          <div className="method-value">{gw(m.mae, 2)}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function AccuracyView({ gate, atGate, onOpenDay }: { gate: string; atGate: boolean; onOpenDay: (day: string) => void }) {
   const { data, error } = useData(() => api.accuracy(gate), gate);
   if (error) return <Failed error={error} />;
   if (!data) return <Loading />;
 
   const s = data.summary;
   const adj = data.adjusted_summary;
+  const naive = data.naive_summary;
   const timeline = data.timeline.map((r) => ({ ...r, t: Date.parse(r.time) }));
   const mondays = timeline.filter((r) => new Date(r.t).getUTCDay() === 1 && new Date(r.t).getUTCHours() === 0).map((r) => r.t);
   const [h0, h1] = data.decision_horizon_h ?? [0, 0];
@@ -41,7 +71,8 @@ export function AccuracyView({ gate }: { gate: string }) {
   return (
     <>
       <p className="lede">
-        Every buying decision in January 2026 (gate closure {gate} UK time), checked against what the meters recorded.
+        Every buying decision in January 2026 ({atGate ? "gate closure" : "decided at"} {gate} UK time on the day before),
+        checked against what the meters recorded.
       </p>
 
       <div className="hero card">
@@ -70,11 +101,32 @@ export function AccuracyView({ gate }: { gate: string }) {
         />
       </div>
 
-      <Card title="Forecast at decision time vs actual, January 2026" subtitle="Each point is one delivery hour.">
+      <Card
+        title="What the forecast is worth"
+        subtitle={`Typical miss (MAE) of three ways to estimate tomorrow’s wind, scored on the same ${s.n} hours.`}
+      >
+        <MethodBars
+          methods={[
+            { label: "Naive guess", note: "wind stays as it is at decision time", mae: naive.mae, color: "var(--text-muted)" },
+            { label: "Elexon forecast", note: "newest run at decision time", mae: s.mae, color: "var(--series-forecast)" },
+            { label: "Bias-corrected", note: "minus the last two weeks’ median error", mae: adj.mae, color: "var(--series-expected)" },
+          ]}
+        />
+        <p className="muted method-summary">
+          Elexon’s forecast cuts the naive guess’s miss by <strong>{pct(1 - s.mae / naive.mae)}</strong>. Correcting its
+          bias takes off another {pct(1 - adj.mae / s.mae)}.
+        </p>
+      </Card>
+
+      <Card title="Forecast at decision time vs actual, January 2026" subtitle="Each point is one delivery hour. Click to open that day.">
         <Legend series={TIMELINE} />
-        <div className="chart" style={{ height: 300 }}>
+        <div className="chart clickable" style={{ height: 300 }}>
           <ResponsiveContainer>
-            <LineChart data={timeline} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
+            <LineChart
+              data={timeline}
+              margin={{ top: 8, right: 16, bottom: 0, left: 0 }}
+              onClick={(e) => typeof e.activeLabel === "number" && onOpenDay(ukDay(e.activeLabel))}
+            >
               <CartesianGrid vertical={false} stroke="var(--grid)" />
               <XAxis dataKey="t" type="number" scale="time" domain={["dataMin", "dataMax"]} ticks={mondays} tickFormatter={dayShort} {...axis} />
               <YAxis {...gwAxis(timelineMax)} tickFormatter={gwTicks} width={40} {...axis} />
@@ -88,6 +140,47 @@ export function AccuracyView({ gate }: { gate: string }) {
             </LineChart>
           </ResponsiveContainer>
         </div>
+      </Card>
+
+      <Card title="Day by day" subtitle="Average error for each delivery day (forecast − actual). Click a bar to open that day.">
+        <div className="chart clickable" style={{ height: 220 }}>
+          <ResponsiveContainer>
+            <BarChart
+              data={data.days}
+              margin={{ top: 8, right: 16, bottom: 0, left: 0 }}
+              onClick={(e) => {
+                const row = data.days[Number(e.activeIndex)];
+                if (row) onOpenDay(row.day);
+              }}
+            >
+              <CartesianGrid vertical={false} stroke="var(--grid)" />
+              <XAxis dataKey="day" tickFormatter={dayShort} interval={2} {...axis} />
+              <YAxis {...signedAxis(data.days.map((d) => d.bias ?? 0))} tickFormatter={gwTicks} width={40} {...axis} />
+              <ReferenceLine y={0} stroke="var(--axis)" />
+              <Tooltip
+                cursor={{ fill: "var(--hover)" }}
+                content={({ active, payload }) => {
+                  const row = payload?.[0]?.payload as DayRow | undefined;
+                  if (!active || !row) return null;
+                  return (
+                    <div className="tooltip">
+                      <div className="tooltip-title">{dayLabel(row.day)} · click to open</div>
+                      <div className="tooltip-row"><strong>{signedGw(row.bias)}</strong><span>average error</span></div>
+                      <div className="tooltip-row"><strong>{gwh(row.forecast_mwh)}</strong><span>forecast</span></div>
+                      <div className="tooltip-row"><strong>{gwh(row.actual_mwh)}</strong><span>actual</span></div>
+                    </div>
+                  );
+                }}
+              />
+              <Bar dataKey="bias" name="average error" radius={3} maxBarSize={24} isAnimationActive={false}>
+                {data.days.map((d) => (
+                  <Cell key={d.day} fill={(d.bias ?? 0) >= 0 ? "var(--series-forecast)" : "var(--series-actual)"} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        <p className="axis-note">Delivery day · blue: less wind than forecast · orange: more</p>
       </Card>
 
       <div className="grid-2">
@@ -174,13 +267,17 @@ export function AccuracyView({ gate }: { gate: string }) {
       <Card title="How these numbers are made">
         <ul className="notes">
           <li>
-            Decision for delivery day D is made at gate closure on D−1. For each hour of D we take the newest Elexon
-            forecast (WINDFOR) published at or before that moment. Nothing published later is used.
+            Decision for delivery day D is made at gate closure on D−1 (or your own decision time). For each hour of D we
+            take the newest Elexon forecast (WINDFOR) published at or before that moment. Nothing published later is used.
           </li>
           <li>Actual = metered GB wind (FUELHH, fuel type WIND) for the half hour starting on the forecast hour.</li>
           <li>
             Range and bias correction use errors from days D−15 to D−2, the last two weeks fully metered when the
             decision is made.
+          </li>
+          <li>
+            Naive guess = the last metered half hour that had finished at decision time, held flat across the delivery
+            day. Any forecast worth paying for should beat it.
           </li>
           <li>Over-forecasting is largest in high wind, which matches wind farms being curtailed when the grid is full.</li>
         </ul>

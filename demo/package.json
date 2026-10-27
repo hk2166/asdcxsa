@@ -1,0 +1,11 @@
+{
+  "name": "wind-forecast-desk-demo",
+  "private": true,
+  "description": "Scripted build of the demo video (see README.md)",
+  "scripts": {
+    "build": "node build.cjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.64.1"
+  }
+}
